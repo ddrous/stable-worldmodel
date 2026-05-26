@@ -283,7 +283,7 @@ The full documentation lives at [galilai-group.github.io/stable-worldmodel](http
 ## Citation
 
 ```bibtex
-@misc{maes2026stableworldmodelplatformreproducibleworld,
+@misc{maes_lld2026swm,
   title  = {stable-worldmodel: A Platform for Reproducible World Modeling Research and Evaluation},
   author = {Lucas Maes and Quentin Le Lidec and Luiz Facury and Nassim Massaudi and
             Ayush Chaurasia and Francesco Capuano and Richard Gao and Taj Gillin and

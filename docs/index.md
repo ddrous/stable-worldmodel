@@ -121,7 +121,7 @@ After you have installed stable-worldmodel, try the [Quick Start Guide](quick_st
 If you wish to cite our [pre-print](https://arxiv.org/abs/2605.21800v1):
 
 ```bibtex
-@misc{maes2026stableworldmodelplatformreproducibleworld,
+@misc{maes_lld2026swm,
       title={stable-worldmodel: A Platform for Reproducible World Modeling Research and Evaluation}, 
       author={Lucas Maes and Quentin Le Lidec and Luiz Facury and Nassim Massaudi and Ayush Chaurasia and Francesco Capuano and Richard Gao and Taj Gillin and Dan Haramati and Damien Scieur and Yann LeCun and Randall Balestriero},
       year={2026},
