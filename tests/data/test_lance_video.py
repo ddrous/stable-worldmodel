@@ -205,6 +205,40 @@ def test_select_video_keys(tmp_path):
     assert 'action' in sample and 'proprio' in sample
 
 
+def test_append_across_writer_sessions(tmp_path):
+    """Reopening the writer to append more episodes must not crash.
+
+    Data collection writes in chunks: each chunk opens a fresh
+    ``LanceVideoWriter`` in the default ``mode='append'``. The first chunk
+    creates the table (running ``_init_schema``, which builds ``_rename_map``);
+    every later chunk hits ``_load_existing_state`` instead, which recovers the
+    schema from disk but used to leave ``_rename_map`` empty — so
+    ``_frames_batch`` raised ``StopIteration`` on the second chunk. Splitting
+    one logical dataset across two writer sessions reproduces that path.
+    """
+    out = tmp_path / 'set'
+    eps = [{k: list(v) for k, v in ep.items()} for ep in _episodes()]
+    first, rest = eps[:1], eps[1:]
+
+    with LanceVideoWriter(out) as w:
+        w.write_episodes([dict(ep) for ep in first])
+    # Second session appends — previously crashed with StopIteration here.
+    with LanceVideoWriter(out) as w:
+        w.write_episodes([dict(ep) for ep in rest])
+
+    ds = LanceVideoDataset(out, keys_to_load=['pixels', 'action', 'proprio'])
+    # Every episode survived the append, with its video rows intact (an empty
+    # rename map would also have silently dropped the appended video frames).
+    for ep_idx, ep in enumerate(eps):
+        ep_len = len(ep['pixels'])
+        sample = ds.load_episode(ep_idx)
+        assert sample['pixels'].shape[0] == ep_len, (
+            f'episode {ep_idx}: got {sample["pixels"].shape[0]} video frames, '
+            f'expected {ep_len}'
+        )
+        assert sample['action'].shape[0] == ep_len
+
+
 def test_open_via_format_registry(tmp_path):
     out = tmp_path / 'set'
     _write(out)
