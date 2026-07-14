@@ -46,7 +46,7 @@ uv venv --python=3.10 && source .venv/bin/activate
 uv sync --extra all --group dev
 ```
 
-Datasets and checkpoints are stored under `$STABLEWM_HOME` (defaults to `~/.stable_worldmodel/`). Override the variable to point at your preferred storage location.
+Datasets and checkpoints are stored under `$STABLEWM_HOME` (defaults to `~/.stable_worldmodel/`). Override the variable to point at your preferred storage location (`export STABLEWM_HOME=$PWD/.stablewm` and also `export SPT_CACHE_DIR=$STABLEWM_HOME`).
 
 > The library is in active development. APIs may change between minor versions.
 

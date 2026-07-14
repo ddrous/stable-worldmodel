@@ -94,12 +94,15 @@ def run(cfg):
     ##       dataset       ##
     #########################
 
+    # print(f'Loading dataset with config:\n{OmegaConf.to_yaml(cfg.data.dataset)}')
+
     dataset_cfg = OmegaConf.to_container(cfg.data.dataset, resolve=True)
     dataset_name = dataset_cfg.pop('name')
     cache_dir = os.environ.get('LOCAL_DATASET_DIR', None)
     print(
         f'Loading dataset "{dataset_name}" from {"local cache: " + cache_dir if cache_dir else "default location"}'
     )
+    # print("Print ls in the parent directory of the dataset directory:")
     dataset = swm.data.load_dataset(
         dataset_name, transform=None, cache_dir=cache_dir, **dataset_cfg
     )
@@ -178,10 +181,17 @@ def run(cfg):
         swm.data.utils.get_cache_dir(sub_folder='checkpoints'), run_id
     )
 
+    # print(f'Just before initializing WandB logger with config:\n{OmegaConf.to_yaml(cfg.wandb.config)}')
+    # print(f'WandB logger enabled: {cfg.wandb.enabled}')
+
     logger = None
     if cfg.wandb.enabled:
         logger = WandbLogger(**cfg.wandb.config)
+        # print(f'\n\nWandB logger initialized with project: {cfg.wandb.config.project} and properties in logger {logger.experiment}\n\n')
+
         logger.log_hyperparams(OmegaConf.to_container(cfg))
+
+    # exit(25)
 
     run_dir.mkdir(parents=True, exist_ok=True)
     with open(run_dir / 'config.yaml', 'w') as f:
@@ -190,7 +200,7 @@ def run(cfg):
     save_ckpt_callback = SaveCkptCallback(
         run_name=cfg.output_model_name,
         cfg=cfg.model,
-        epoch_interval=1,
+        epoch_interval=5,
     )
 
     trainer = pl.Trainer(
@@ -214,4 +224,15 @@ def run(cfg):
 
 
 if __name__ == '__main__':
+
+
+    # import torch.multiprocessing as mp
+
+    # # Force 'spawn' right before the main execution kicks off
+    # try:
+    #     mp.set_start_method('spawn', force=True)
+    # except RuntimeError:
+    #     pass
+
+
     run()
