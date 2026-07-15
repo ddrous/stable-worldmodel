@@ -41,7 +41,8 @@ optimizer:
   weight_decay: 1e-3
 
 wm:
-  history_size: 3
+  # history_size: 3
+  history_size: 1
   num_preds: 1
 
 model:

@@ -1,0 +1,119 @@
+# Weight-Space Planner training configuration for stable-world-model.
+defaults:
+  - _self_
+  - launcher: local
+  - data: tworoom
+
+output_model_name: wsp
+subdir: ${hydra:job.id}
+seed: 3072
+img_size: 224
+train_split: 0.9
+checkpoint_interval: 5
+
+trainer:
+  max_epochs: 1
+  devices: auto
+  accelerator: gpu
+  precision: bf16-mixed
+  gradient_clip_val: 1.0
+
+loader:
+  batch_size: 64
+  num_workers: 24
+  drop_last: true
+  persistent_workers: false
+  prefetch_factor: 3
+  pin_memory: true
+  shuffle: true
+
+optimizer:
+  type: AdamW
+  lr: 5.0e-5
+  weight_decay: 1.0e-3
+
+wm:
+  # The JAX name was context_size. This controls how many preceding states a
+  # prediction can see; stable-world-model calls it history_size.
+  history_size: 1
+  # Keep four sampled observations per item, as in the supplied WSP training.
+  sequence_size: 4
+  num_preds: 1
+
+model:
+  _target_: stable_worldmodel.wm.wsp.WSP
+  _recursive_: false
+  image_size: ${img_size}
+  frame_channels: 3
+  history_size: ${wm.history_size}
+
+  inr:
+    num_fourier_frequencies: 6
+    width: 12
+    depth: 6
+
+  encoder:
+    _target_: stable_worldmodel.wm.wsp.module.Encoder
+    kind: cnn                 # one of: cnn, vit, resnet
+    in_channels: 3
+    # Exact source encoder (the recommended/default setting).
+    cnn:
+      hidden_width: 48
+      depth: 5
+      use_coordinate_chans: true
+      num_slots: 6
+      slot_dim: 128
+      slot_heads: 8
+    # Optional ViT encoder. Change `kind` above; no code edits are needed.
+    vit:
+      image_size: ${img_size}
+      patch_size: 16
+      hidden_dim: 384
+      depth: 6
+      heads: 6
+      mlp_dim: 1536
+      dropout: 0.1
+    # Optional compact ResNet-18-style encoder.
+    resnet:
+      channels: [64, 128, 256, 512]
+      blocks_per_stage: 2
+
+  predictor:
+    _target_: stable_worldmodel.wm.wsp.module.Predictor
+    num_frames: ${wm.history_size}
+    condition_dim: 384
+    hidden_dim: 384
+    depth: 5
+    heads: 16
+    dim_head: 24
+    mlp_dim: 768
+    dropout: 0.1
+    emb_dropout: 0.1
+
+  # mlp_scale=0 faithfully represents the source model's single action
+  # projection while giving it LeWM's dedicated Embedder interface.
+  action_encoder:
+    _target_: stable_worldmodel.wm.wsp.module.Embedder
+    input_dim: ???            # filled from frameskip * dataset action_dim
+    smoothed_dim: null
+    emb_dim: 384
+    mlp_scale: 0
+
+loss:
+  # Executable JAX source: total = dynamics + 0.1 * reconstruction.
+  reconstruction_weight: 0.1
+  pixel_subsample_size: 1024
+
+data:
+  dataset:
+    num_steps: ${wm.sequence_size}
+    frameskip: 5
+    name: tworoom.h5
+    keys_to_load: [pixels, action, proprio]
+    keys_to_cache: [action, proprio]
+
+wandb:
+  enabled: false
+  config:
+    project: stable-world-model-wsp
+    name: ${output_model_name}-${hydra:job.id}
