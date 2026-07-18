@@ -9,20 +9,29 @@ subdir: ${hydra:job.id}
 seed: 3072
 img_size: 224
 train_split: 0.9
-checkpoint_interval: 5
+checkpoint_interval: 10
+
+rollout_val_steps: 10
+rollout_val_fps: 2
+
+data:
+  dataset:
+    # num_steps: ${rollout_val_steps}
+    num_steps: 4
 
 trainer:
-  max_epochs: 1
+  max_epochs: 200
   devices: auto
   accelerator: gpu
   precision: bf16-mixed
   gradient_clip_val: 1.0
+  val_check_interval: 250
 
 loader:
   batch_size: 64
-  num_workers: 24
+  num_workers: 16
   drop_last: true
-  persistent_workers: false
+  persistent_workers: true
   prefetch_factor: 3
   pin_memory: true
   shuffle: true
@@ -37,7 +46,7 @@ wm:
   # prediction can see; stable-world-model calls it history_size.
   history_size: 1
   # Keep four sampled observations per item, as in the supplied WSP training.
-  sequence_size: 4
+  # sequence_size: 4
   num_preds: 1
 
 model:
@@ -103,17 +112,3 @@ loss:
   # Executable JAX source: total = dynamics + 0.1 * reconstruction.
   reconstruction_weight: 0.1
   pixel_subsample_size: 1024
-
-data:
-  dataset:
-    num_steps: ${wm.sequence_size}
-    frameskip: 5
-    name: tworoom.h5
-    keys_to_load: [pixels, action, proprio]
-    keys_to_cache: [action, proprio]
-
-wandb:
-  enabled: false
-  config:
-    project: stable-world-model-wsp
-    name: ${output_model_name}-${hydra:job.id}

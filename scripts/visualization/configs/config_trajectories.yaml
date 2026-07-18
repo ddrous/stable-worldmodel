@@ -1,5 +1,5 @@
 defaults:
-  - world_model@datasets.pusht_train.world_model: lewm
+  - world_model@datasets.tworoom.world_model: wsp
   - _self_ # Overrides from this file apply LAST
 
 # Global Settings (Must be consistent across datasets for TSNE dimensions to match)
@@ -11,17 +11,16 @@ frameskip: 5
 cache_dir: null
 dimensionality_reduction: pca
 
-# Define multiple dataset-model pairs to visualize. Switch the world model per
-# dataset via the `defaults` list above; the checkpoint name is set in the
-# selected world_model config (world_model/lewm.yaml -> model_name: lewm-pusht).
+# Define the dataset-model pair to visualize. The world model is selected via
+# the `defaults` list above; the checkpoint name is set in the selected
+# world_model config.
 datasets:
-  pusht_train:
+  tworoom:
     dataset:
-      # Local PushT dataset at $STABLEWM_HOME/datasets/lewm-pusht
-      # (single pusht_expert_train.lance table; format auto-detected).
-      dataset_name: lewm-pusht
+      # Local TwoRoom dataset under the repo cache.
+      dataset_name: ${hydra:runtime.cwd}/.stablewm/datasets/tworoom.h5
       batch_size: 32
       num_workers: 8
       n_trajectories: 4
       n_steps: ${eval:'${..world_model.num_preds} + ${..world_model.history_size}'}
-    dataset_group: pusht
+    dataset_group: tworoom

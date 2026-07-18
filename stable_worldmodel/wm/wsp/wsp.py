@@ -90,6 +90,7 @@ class WSP(nn.Module):
 
     def predict(self, emb: Tensor, act_emb: Tensor) -> Tensor:
         """Predict each token's next residual weight vector causally."""
+        # print(f"\n\n\nemb.shape: {emb.shape}, act_emb.shape: {act_emb.shape}\n\n\n")
         return self.predictor(emb, act_emb)
 
     def coordinate_grid(self, height: int, width: int, *, device=None,
@@ -122,6 +123,7 @@ class WSP(nn.Module):
         leading_shape = z_offset.shape[:-1]
         flat_offsets = z_offset.reshape(-1, self.z_dim).to(self.anchor.dtype)
         pixels = self.inr(features, flat_offsets + self.anchor)
+        # pixels = self.inr(features, flat_offsets)
         return pixels.reshape(*leading_shape, *spatial_shape, -1)
 
     def rollout(self, info: dict[str, Any], action_sequence: Tensor,

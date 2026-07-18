@@ -261,6 +261,7 @@ def collect_embeddings(cfg, exp_cfg):
     trajs_embeddings = []  # list to store the embeddings of the trajectories (T x D)
     predicted_embeddings = []  # list to store the predicted embeddings of the trajectories (T x D)
     trajs_pixels = []  # list to store the pixels of the trajectories (T x C x H x W)
+    predicted_pixels = []  # list to store the predicted pixels of the trajectories (T x H x W x C)
 
     backbone_only = exp_cfg.world_model.get('backbone_only', False)
 
@@ -310,7 +311,12 @@ def collect_embeddings(cfg, exp_cfg):
         trajs_embeddings.append(flatten_emb(truth[0]).cpu().detach())
         predicted_embeddings.append(flatten_emb(pred[0, 0]).cpu().detach())
 
-    return trajs_embeddings, predicted_embeddings, trajs_pixels
+        if hasattr(world_model, 'render'):
+            predicted_pixels.append(world_model.render(pred[0, 0]).detach().cpu())
+        else:
+            predicted_pixels.append(traj['pixels'].squeeze(0).cpu().detach())
+
+    return trajs_embeddings, predicted_embeddings, trajs_pixels, predicted_pixels
 
 
 # ============================================================================
@@ -449,6 +455,7 @@ def create_video_visualization(
     trajs_2d,
     preds_2d,
     trajs_pixels,
+    predicted_pixels,
     labels,
     output_file='trajectories_video.mp4',
     max_trajs=5,
@@ -465,6 +472,7 @@ def create_video_visualization(
     subset_trajs = [trajs_2d[i] for i in indices]
     subset_preds = [preds_2d[i] for i in indices]
     subset_pixels = [trajs_pixels[i] for i in indices]
+    subset_pred_pixels = [predicted_pixels[i] for i in indices]
     subset_labels = [labels[i] for i in indices]
 
     n_rows = len(subset_trajs)
@@ -476,7 +484,7 @@ def create_video_visualization(
     colors = cmap(np.linspace(0, 1, len(unique_labels)))
     label_color_map = dict(zip(unique_labels, colors))
 
-    fig, axes = plt.subplots(n_rows, 2, figsize=(10, 3 * n_rows))
+    fig, axes = plt.subplots(n_rows, 3, figsize=(14, 3 * n_rows))
     if n_rows == 1:
         axes = axes[np.newaxis, :]
 
@@ -492,7 +500,8 @@ def create_video_visualization(
 
     for i in range(n_rows):
         ax_vid = axes[i, 0]
-        ax_lat = axes[i, 1]
+        ax_pred = axes[i, 1]
+        ax_lat = axes[i, 2]
         label = subset_labels[i]
         base_color = label_color_map[label]
 
@@ -500,8 +509,17 @@ def create_video_visualization(
         frame0 = subset_pixels[i][0].permute(1, 2, 0).numpy()
         frame0 = (frame0 - frame0.min()) / (frame0.max() - frame0.min() + 1e-6)
         img_plots.append(ax_vid.imshow(frame0))
-        ax_vid.set_title(f'{label}')
+        ax_vid.set_title(f'{label} | Truth')
         ax_vid.axis('off')
+
+        pred0 = subset_pred_pixels[i][0]
+        if pred0.ndim == 3 and pred0.shape[0] in (1, 3):
+            pred0 = pred0.permute(1, 2, 0)
+        pred0 = pred0.numpy()
+        pred0 = (pred0 - pred0.min()) / (pred0.max() - pred0.min() + 1e-6)
+        img_plots.append(ax_pred.imshow(pred0))
+        ax_pred.set_title(f'{label} | Pred')
+        ax_pred.axis('off')
 
         # --- Right: Latent ---
         # Background faint traces
@@ -556,6 +574,17 @@ def create_video_visualization(
             frame = (frame - frame.min()) / (frame.max() - frame.min() + 1e-6)
             img_plots[i].set_data(frame)
             artists.append(img_plots[i])
+
+            pred_idx = min(idx, len(subset_pred_pixels[i]) - 1)
+            pred_frame = subset_pred_pixels[i][pred_idx]
+            if pred_frame.ndim == 3 and pred_frame.shape[0] in (1, 3):
+                pred_frame = pred_frame.permute(1, 2, 0)
+            pred_frame = pred_frame.numpy()
+            pred_frame = (
+                pred_frame - pred_frame.min()
+            ) / (pred_frame.max() - pred_frame.min() + 1e-6)
+            img_plots[n_rows + i].set_data(pred_frame)
+            artists.append(img_plots[n_rows + i])
 
             # Helper for trail colors
             def get_trail_colors(n_pts):
@@ -617,6 +646,7 @@ def run(cfg):
     all_embeddings_list = []
     all_predicted_embeddings_list = []
     all_pixels_list = []
+    all_predicted_pixels_list = []
     all_labels_list = []
     trajectory_lengths = []
 
@@ -626,7 +656,7 @@ def run(cfg):
             print(f'Processing dataset key: {key}')
             exp_cfg = cfg.datasets[key]
 
-            embeddings, predicted_embeddings, trajs_pixels = (
+            embeddings, predicted_embeddings, trajs_pixels, predicted_pixels = (
                 collect_embeddings(cfg, exp_cfg)
             )
 
@@ -634,6 +664,7 @@ def run(cfg):
                 all_embeddings_list.extend(embeddings)
                 all_predicted_embeddings_list.extend(predicted_embeddings)
                 all_pixels_list.extend(trajs_pixels)
+                all_predicted_pixels_list.extend(predicted_pixels)
 
                 dataset_name = exp_cfg.dataset.dataset_name
                 num_traj = len(embeddings)
@@ -715,6 +746,7 @@ def run(cfg):
         trajs_2d,
         preds_2d,
         all_pixels_list,
+        all_predicted_pixels_list,
         all_labels_list,
         output_file='trajectories_video.mp4',
         max_trajs=4,
