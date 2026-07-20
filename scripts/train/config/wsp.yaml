@@ -9,7 +9,7 @@ subdir: ${hydra:job.id}
 seed: 3072
 img_size: 224
 train_split: 0.9
-checkpoint_interval: 10
+checkpoint_interval: 5
 
 rollout_val_steps: 10
 rollout_val_fps: 2
@@ -20,15 +20,15 @@ data:
     num_steps: 4
 
 trainer:
-  max_epochs: 200
+  max_epochs: 25
   devices: auto
   accelerator: gpu
   precision: bf16-mixed
   gradient_clip_val: 1.0
-  val_check_interval: 250
+  val_check_interval: 5000
 
 loader:
-  batch_size: 64
+  batch_size: 32
   num_workers: 16
   drop_last: true
   persistent_workers: true
@@ -38,13 +38,13 @@ loader:
 
 optimizer:
   type: AdamW
-  lr: 5.0e-5
+  lr: 1.0e-5
   weight_decay: 1.0e-3
 
 wm:
   # The JAX name was context_size. This controls how many preceding states a
   # prediction can see; stable-world-model calls it history_size.
-  history_size: 1
+  history_size: 3
   # Keep four sampled observations per item, as in the supplied WSP training.
   # sequence_size: 4
   num_preds: 1
@@ -111,4 +111,4 @@ model:
 loss:
   # Executable JAX source: total = dynamics + 0.1 * reconstruction.
   reconstruction_weight: 0.1
-  pixel_subsample_size: 1024
+  pixel_subsample_size: 2048

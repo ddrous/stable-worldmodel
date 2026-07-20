@@ -13,7 +13,7 @@ seed: 42
 # policy: gcbc # ckpt name or random
 # policy: lewm/weights_epoch_25.pt # ckpt name or random
 # policy: wsp_ORIG/weights_epoch_50.pt # ckpt name or random
-policy: wsp/weights_epoch_3.pt # ckpt name or random
+policy: wsp/weights_epoch_25.pt # ckpt name or random
 # policy: runs/20260717/121346/b37e50670da6/checkpoints/epoch=3-step=164432.ckpt
 # policy: .stablewm/runs/20260717/121346/b37e50670da6/checkpoints/last.pt
 
